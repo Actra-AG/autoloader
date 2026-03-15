@@ -56,10 +56,10 @@ $autoloader->addPath(new AutoloaderPath(
 
 ### Filesystem Caching
 
-To enable caching, provide a path to a writable JSON file when registering the autoloader. This significantly speeds up class loading in production environments.
+To enable caching, provide a path to a writable PHP file when registering the autoloader. This significantly speeds up class loading in production environments by leveraging OPcache.
 
 ```php
-$autoloader = Autoloader::register(__DIR__ . '/cache/autoloader.json');
+$autoloader = Autoloader::register(__DIR__ . '/cache/autoloader.php');
 ```
 
 The cache is automatically updated and saved when the script finishes execution (using a destructor).

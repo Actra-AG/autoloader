@@ -10,6 +10,7 @@ namespace actra\autoloader;
 
 use Exception;
 use LogicException;
+use Throwable;
 
 require_once __DIR__ . '/AutoloaderPath.php';
 require_once __DIR__ . '/AutoloaderPathMode.php';
@@ -57,10 +58,8 @@ class Autoloader
         }
         file_put_contents(
             filename: $this->cacheFilePath,
-            data: json_encode(
-                value: $this->cachedClasses,
-                flags: JSON_UNESCAPED_UNICODE | JSON_BIGINT_AS_STRING | JSON_THROW_ON_ERROR
-            )
+            data: '<?php return ' . var_export(value: $this->cachedClasses, return: true) . ';',
+            flags: LOCK_EX
         );
     }
 
@@ -90,14 +89,12 @@ class Autoloader
         ) {
             return [];
         }
-
-        $jsonString = file_get_contents(filename: $cacheFilePath);
-
-        return json_decode(
-            json: $jsonString,
-            associative: true,
-            flags: JSON_THROW_ON_ERROR
-        );
+        try {
+            $cached = include $cacheFilePath;
+            return is_array(value: $cached) ? $cached : [];
+        } catch (Throwable) {
+            return [];
+        }
     }
 
     private function doAutoload(string $className): bool
