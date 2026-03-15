@@ -1,0 +1,22 @@
+{
+    "name": "actra/autoloader",
+    "description": "A simple, lightweight, and efficient PHP Autoloader supporting PSR-4, PSR-0, and filesystem caching with OPcache support.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Actra AG",
+            "homepage": "https://www.actra.ch"
+        }
+    ],
+    "require": {
+        "php": ">=8.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "actra\\autoloader\\": "src/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

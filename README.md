@@ -12,7 +12,17 @@ A simple, lightweight, and efficient PHP Autoloader that supports PSR-4, PSR-0, 
 
 ## Installation
 
-Simply include the source files in your project:
+### Via Composer (Recommended)
+
+To install the autoloader via Composer, run:
+
+```bash
+composer require actra/autoloader
+```
+
+### Standalone (Manual)
+
+If you're not using Composer, simply include the source files in your project:
 
 ```php
 require_once 'src/Autoloader.php';
