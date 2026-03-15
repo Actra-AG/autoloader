@@ -40,7 +40,7 @@ use actra\autoloader\AutoloaderPath;
 $autoloader = Autoloader::register();
 
 // Add a path for a namespace
-$autoloader->addPath(new AutoloaderPath(
+$autoloader->addPath(autoloaderPath: new AutoloaderPath(
     path: __DIR__ . '/src',
     prefix: 'MyProject\\'
 ));
@@ -55,7 +55,7 @@ use actra\autoloader\AutoloaderPathMode;
 
 $autoloader = Autoloader::register();
 
-$autoloader->addPath(new AutoloaderPath(
+$autoloader->addPath(autoloaderPath: new AutoloaderPath(
     path: __DIR__ . '/lib',
     prefix: 'Legacy_',
     autoloaderPathMode: AutoloaderPathMode::PSR0
@@ -66,10 +66,12 @@ $autoloader->addPath(new AutoloaderPath(
 
 ### Filesystem Caching
 
-To enable caching, provide a path to a writable PHP file when registering the autoloader. This significantly speeds up class loading in production environments by leveraging OPcache.
+By default, the autoloader uses a local cache file at `src/cache/autoloader.php`. This significantly speeds up class loading in production environments by leveraging OPcache. The cache directory is automatically created if it doesn't exist.
+
+To use a custom cache location, provide a path when registering:
 
 ```php
-$autoloader = Autoloader::register(__DIR__ . '/cache/autoloader.php');
+$autoloader = Autoloader::register(cacheFilePath: __DIR__.' /cache/autoloader.php');
 ```
 
 The cache is automatically updated and saved when the script finishes execution (using a destructor).
@@ -79,7 +81,7 @@ The cache is automatically updated and saved when the script finishes execution 
 If your project uses non-standard file extensions, you can specify them in the `AutoloaderPath` constructor:
 
 ```php
-$autoloader->addPath(new AutoloaderPath(
+$autoloader->addPath(autoloaderPath: new AutoloaderPath(
     path: __DIR__ . '/src',
     prefix: 'App\\',
     fileSuffixList: ['.php', '.class.php', '.inc']

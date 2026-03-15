@@ -66,18 +66,27 @@ class Autoloader
     private function __construct(string $cacheFilePath = '')
     {
         $this->cacheFilePath = trim(string: $cacheFilePath);
-        $this->checkIfCacheDirectoryExists(cacheFilePath: $cacheFilePath);
-        $this->cachedClasses = $this->initCachedClasses(cacheFilePath: $cacheFilePath);
+        if ($this->cacheFilePath === '') {
+            $this->cacheFilePath = __DIR__ . DIRECTORY_SEPARATOR . 'cache' . DIRECTORY_SEPARATOR . 'autoloader.php';
+        }
+        $this->ensureCacheDirectoryExists(cacheFilePath: $this->cacheFilePath);
+        $this->cachedClasses = $this->initCachedClasses(cacheFilePath: $this->cacheFilePath);
     }
 
-    private function checkIfCacheDirectoryExists(string $cacheFilePath): void
+    private function ensureCacheDirectoryExists(string $cacheFilePath): void
     {
-        if ($cacheFilePath === '') {
+        $dir = dirname(path: $cacheFilePath);
+        if (is_dir(filename: $dir)) {
             return;
         }
-        $dir = dirname(path: $cacheFilePath);
-        if (!is_dir(filename: $dir)) {
-            throw new Exception(message: 'Cache-Directory ' . $dir . ' does not exist');
+        if (
+            !mkdir(
+                directory: $dir,
+                recursive: true
+            )
+            && !is_dir(filename: $dir)
+        ) {
+            throw new Exception(message: 'Cache-Directory ' . $dir . ' could not be created');
         }
     }
 
