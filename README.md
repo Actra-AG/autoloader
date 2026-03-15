@@ -5,7 +5,7 @@ A simple, lightweight, and efficient PHP Autoloader that supports PSR-4, PSR-0, 
 ## Features
 
 - **PSR-4 and PSR-0 Support**: Load classes according to modern and legacy standards.
-- **Filesystem Caching**: Boost performance by caching class-to-file mappings in a JSON file.
+- **Filesystem Caching**: Boost performance by caching class-to-file mappings in a PHP file.
 - **Custom Suffixes**: Supports multiple file extensions (e.g., `.php`, `.inc.php`, `.class.php`).
 - **Namespace Prefixes**: Easily map namespaces or prefixes to specific directories.
 - **Lightweight**: Zero external dependencies.
