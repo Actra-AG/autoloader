@@ -10,12 +10,42 @@
         }
     ],
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.5",
+      "ext-zend-opcache": "*"
+    },
+    "require-dev": {
+        "actra/coding-standard": "^1.13",
+        "phpunit/phpunit": "^13.4"
     },
     "autoload": {
         "psr-4": {
             "actra\\autoloader\\": "src/"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "actra\\autoloader\\tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "cs": "php-cs-fixer check --diff",
+        "cs:fix": "php-cs-fixer fix",
+        "phpstan": "phpstan analyse --memory-limit=-1",
+        "phpstan:baseline": "phpstan analyse --memory-limit=-1 --generate-baseline",
+        "test": "@php -d opcache.enable_cli=1 -d opcache.file_update_protection=0 vendor/bin/phpunit",
+        "check": [
+            "@cs",
+            "@phpstan",
+            "@test"
+        ]
+    },
+    "scripts-descriptions": {
+        "cs": "Check the code style (PER Coding Style)",
+        "cs:fix": "Fix the code style",
+        "phpstan": "Run the static analysis (PHPStan level 10, strict)",
+        "phpstan:baseline": "Regenerate phpstan-baseline.neon",
+        "test": "Run all tests",
+        "check": "Check the code style, run the static analysis and all tests"
     },
     "minimum-stability": "stable",
     "prefer-stable": true

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @copyright Actra AG - https://www.actra.ch
  * @license   MIT
@@ -8,17 +9,19 @@ declare(strict_types=1);
 
 namespace actra\autoloader;
 
-use Exception;
 use LogicException;
+use RuntimeException;
 use Throwable;
 
 require_once __DIR__ . '/AutoloaderPath.php';
 require_once __DIR__ . '/AutoloaderPathMode.php';
+require_once __DIR__ . '/CacheFileWriter.php';
 
-class Autoloader
+final class Autoloader
 {
     private static ?Autoloader $registeredInstance = null;
     private string $cacheFilePath;
+    /** @var array<string, string> */
     private array $cachedClasses;
     /** @var AutoloaderPath[] */
     private array $paths = [];
@@ -26,13 +29,13 @@ class Autoloader
 
     public static function register(string $cacheFilePath = ''): Autoloader
     {
-        if (!is_null(value: Autoloader::$registeredInstance)) {
+        if (Autoloader::$registeredInstance !== null) {
             throw new LogicException(message: 'Autoloader is already registered.');
         }
         Autoloader::$registeredInstance = new Autoloader(cacheFilePath: $cacheFilePath);
         spl_autoload_register(callback: [
             Autoloader::$registeredInstance,
-            'doAutoload'
+            'doAutoload',
         ]);
 
         return Autoloader::$registeredInstance;
@@ -40,6 +43,10 @@ class Autoloader
 
     public static function get(): Autoloader
     {
+        if (Autoloader::$registeredInstance === null) {
+            throw new LogicException(message: 'Autoloader is not registered, call Autoloader::register() first.');
+        }
+
         return Autoloader::$registeredInstance;
     }
 
@@ -56,11 +63,13 @@ class Autoloader
         ) {
             return;
         }
-        file_put_contents(
-            filename: $this->cacheFilePath,
-            data: '<?php return ' . var_export(value: $this->cachedClasses, return: true) . ';',
-            flags: LOCK_EX
+        $written = new CacheFileWriter()->write(
+            cacheFilePath: $this->cacheFilePath,
+            cachedClasses: $this->cachedClasses,
         );
+        if ($written) {
+            $this->cachedClassesChanged = false;
+        }
     }
 
     private function __construct(string $cacheFilePath = '')
@@ -82,14 +91,17 @@ class Autoloader
         if (
             !mkdir(
                 directory: $dir,
-                recursive: true
+                recursive: true,
             )
             && !is_dir(filename: $dir)
         ) {
-            throw new Exception(message: 'Cache-Directory ' . $dir . ' could not be created');
+            throw new RuntimeException(message: 'Cache-Directory ' . $dir . ' could not be created');
         }
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function initCachedClasses(string $cacheFilePath): array
     {
         if (
@@ -100,7 +112,13 @@ class Autoloader
         }
         try {
             $cached = include $cacheFilePath;
-            return is_array(value: $cached) ? $cached : [];
+            if (!is_array(value: $cached)) {
+                return [];
+            }
+
+            // Written by CacheFileWriter only, so the content is not checked again for every request
+            /** @var array<string, string> $cached */
+            return $cached;
         } catch (Throwable) {
             return [];
         }
@@ -108,11 +126,13 @@ class Autoloader
 
     private function doAutoload(string $className): bool
     {
-        $includePath = $this->getPathFromCache(className: $className);
-        if (!is_null(value: $includePath)) {
-            require_once $includePath;
-
-            return true;
+        if (array_key_exists(key: $className, array: $this->cachedClasses)) {
+            if ($this->includeCachedFile(includePath: $this->cachedClasses[$className])) {
+                return true;
+            }
+            // Stale entry: remove it, even if the class is not found anymore
+            unset($this->cachedClasses[$className]);
+            $this->cachedClassesChanged = true;
         }
         foreach ($this->paths as $autoloaderPath) {
             $path = $autoloaderPath->path;
@@ -120,25 +140,25 @@ class Autoloader
             $prefix = $autoloaderPath->prefix;
             if (!str_starts_with(
                 haystack: $className,
-                needle: $prefix
+                needle: $prefix,
             )) {
                 continue;
             }
             $relativeClass = substr(
                 string: $className,
-                offset: strlen(string: $prefix)
+                offset: strlen(string: $prefix),
             );
             $phpFilePath = $path . str_replace(
-                    search: $mode->getDelimiter(),
-                    replace: DIRECTORY_SEPARATOR,
-                    subject: $relativeClass
-                );
+                search: $mode->getDelimiter(),
+                replace: DIRECTORY_SEPARATOR,
+                subject: $relativeClass,
+            );
             foreach ($autoloaderPath->fileSuffixList as $fileSuffix) {
                 $includePath = $phpFilePath . $fileSuffix;
                 if (file_exists(filename: $includePath)) {
                     $this->doInclude(
                         includePath: $includePath,
-                        className: $className
+                        className: $className,
                     );
                     return true;
                 }
@@ -147,29 +167,41 @@ class Autoloader
         return false;
     }
 
-    private function getPathFromCache(string $className): ?string
+    /**
+     * Includes the cached file without checking its existence first (saves a stat call per class), and reports
+     * a missing file (moved or deleted since it was cached) as false instead of a warning.
+     */
+    private function includeCachedFile(string $includePath): bool
     {
-        if (
-            !array_key_exists(
-                key: $className,
-                array: $this->cachedClasses
-            )) {
-            return null;
-        }
-        $classPath = $this->cachedClasses[$className];
-        if (file_exists(filename: $classPath)) {
-            return $classPath;
-        }
-        if (file_exists(filename: 'phar://' . $classPath)) {
-            return 'phar://' . $classPath;
-        }
+        $previousErrorHandler = null;
+        $previousErrorHandler = set_error_handler(
+            callback: static function (
+                int $errno,
+                string $errstr,
+                string $errfile,
+                int $errline,
+            ) use (&$previousErrorHandler): bool {
+                // Warnings of the include statement itself; errors in the included file are passed on
+                if ($errfile === __FILE__) {
+                    return true;
+                }
+                if ($previousErrorHandler === null) {
+                    return false;
+                }
 
-        return null;
+                return $previousErrorHandler($errno, $errstr, $errfile, $errline) !== false;
+            },
+        );
+        try {
+            return (include_once $includePath) !== false;
+        } finally {
+            restore_error_handler();
+        }
     }
 
     private function doInclude(
         string $includePath,
-        string $className
+        string $className,
     ): void {
         require_once $includePath;
         $this->cachedClasses[$className] = $includePath;

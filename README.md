@@ -71,10 +71,11 @@ By default, the autoloader uses a local cache file at `src/cache/autoloader.php`
 To use a custom cache location, provide a path when registering:
 
 ```php
-$autoloader = Autoloader::register(cacheFilePath: __DIR__.' /cache/autoloader.php');
+$autoloader = Autoloader::register(cacheFilePath: __DIR__ . '/cache/autoloader.php');
 ```
 
-The cache is automatically updated and saved when the script finishes execution (using a destructor).
+The cache is automatically updated and saved when the script finishes execution (using a destructor). It is written
+atomically and invalidated in OPcache, so concurrent requests always include a complete cache file.
 
 ### Custom File Suffixes
 
@@ -90,7 +91,7 @@ $autoloader->addPath(autoloaderPath: new AutoloaderPath(
 
 ## Requirements
 
-- PHP 8.2 or higher (Uses `readonly` classes and enums)
+- PHP 8.5 or higher
 
 ## License
 

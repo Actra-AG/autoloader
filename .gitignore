@@ -1,0 +1,17 @@
+# Whitelist: ignore everything, allow tracked files explicitly
+/*
+!/.ddev/
+!/.editorconfig
+!/.gitattributes
+!/.gitignore
+!/.php-cs-fixer.dist.php
+!/AGENTS.md
+!/CLAUDE.md
+!/LICENSE
+!/README.md
+!/UPGRADE.md
+!/composer.json
+!/phpstan.neon
+!/phpunit.xml
+!/src/
+!/tests/
